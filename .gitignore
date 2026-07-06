@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Claude Code local session state
+.claude/
+
+# R session artefacts
+.Rhistory
+.RData
+.Rproj.user/
