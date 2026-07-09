@@ -38,6 +38,15 @@ if (!dir.exists(fig_dir))  dir.create(fig_dir,  recursive = TRUE)
 if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
 
 
+# If the Stage-2 outputs aren't on disk yet (fresh checkout), run the prep
+# script now — it only needs the raw .xls and writes everything we load below.
+# Re-seed afterwards so this script behaves identically either way.
+if (!all(file.exists(file.path(data_dir, c("train_df.rds", "test_df.rds"))))) {
+  message("Stage-2 outputs not found in data/ — running the prep script first ...")
+  source("stl_Kokru_Dharmadhikari_Sinha_prep.R")
+  set.seed(1)
+}
+
 # Load the model-ready frames from Stage 2. These already have the categories
 # recoded, types fixed, continuous predictors standardised on train only, and a
 # stratified 70/30 split. `default` is a factor c("0","1").

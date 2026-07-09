@@ -47,6 +47,17 @@ if (!dir.exists(fig_dir))  dir.create(fig_dir,  recursive = TRUE)
 if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
 
 
+# If the Stage-2 outputs aren't on disk yet (fresh checkout), run the prep
+# script now — it only needs the raw .xls and writes everything we load below.
+# Re-seed afterwards: the stratified subsample draws below depend on the RNG
+# state, so this script must behave identically either way.
+if (!all(file.exists(file.path(data_dir, c("x_train.rds", "y_train.rds",
+                                           "x_test.rds", "y_test.rds"))))) {
+  message("Stage-2 outputs not found in data/ — running the prep script first ...")
+  source("stl_Kokru_Dharmadhikari_Sinha_prep.R")
+  set.seed(1)
+}
+
 # --- Load the Stage-2 design matrices ---
 # One-hot numeric matrices, no intercept, so every SVM (e1071 kernels and the
 # sparseSVM linear fits alike) sees the same features on the same scale. Scaling
@@ -137,12 +148,23 @@ eval_metrics <- function(pred_class, score, truth, method_name, n_feat) {
 # by hand as x %*% w + intercept at the CV-selected lambda. That's the signed
 # distance to the hyperplane — fine as a ranking score for AUC (its sign gives
 # back the predicted class), but it's not a calibrated probability.
+# Caution: sparseSVM's internal +1/-1 coding follows the order in which the
+# labels appear in the training vector, so the raw decision value can end up
+# anti-aligned with class "1" (it did on the Boston data). The model's own
+# class predictions are always correctly mapped, so we use them to orient the
+# score: predicted "1"s must sit on the positive side; if not, flip the sign.
+# (On this dataset the score is already aligned, so the flip is a no-op and
+# the reported metrics are unchanged — this is defensive consistency.)
 sparsesvm_score <- function(cv_fit, newx) {
   co <- as.numeric(coef(cv_fit))
   names(co) <- rownames(as.matrix(coef(cv_fit)))
   b0 <- co[["(Intercept)"]]
   w  <- co[names(co) != "(Intercept)"]
-  as.numeric(newx[, names(w), drop = FALSE] %*% w + b0)
+  s  <- as.numeric(newx[, names(w), drop = FALSE] %*% w + b0)
+  pred <- as.character(predict(cv_fit, newx, type = "class"))
+  if (all(c("0", "1") %in% pred) &&
+      mean(s[pred == "1"]) < mean(s[pred == "0"])) s <- -s
+  s
 }
 
 results <- list()  # one metrics row per model

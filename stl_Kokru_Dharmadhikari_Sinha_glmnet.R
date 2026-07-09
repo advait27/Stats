@@ -37,6 +37,17 @@ if (!dir.exists(fig_dir))  dir.create(fig_dir,  recursive = TRUE)
 if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
 
 
+# If the Stage-2 outputs aren't on disk yet (fresh checkout), run the prep
+# script now — it only needs the raw .xls and writes everything we load below.
+# Re-seed afterwards so this script behaves identically either way.
+if (!all(file.exists(file.path(data_dir, c("x_train.rds", "y_train.rds",
+                                           "x_test.rds", "y_test.rds",
+                                           "cv_foldid.rds"))))) {
+  message("Stage-2 outputs not found in data/ — running the prep script first ...")
+  source("stl_Kokru_Dharmadhikari_Sinha_prep.R")
+  set.seed(1)
+}
+
 # Load the Stage-2 matrices and the shared fold vector.
 # glmnet wants a numeric design matrix and a response. Reuse the one-hot,
 # no-intercept matrices from Stage 2 (glmnet adds its own intercept and
