@@ -1,0 +1,6 @@
+"family","model","seconds"
+"Logistic","glm logistic (full 21k)",0.18
+"Penalised linear","cv.glmnet lasso (full 21k)",3.64
+"SVM","e1071 RBF (8k subsample)",5.48
+"MLP","nnet size=8 (full 21k)",5.56
+"SVM","e1071 linear (8k subsample)",7.13
